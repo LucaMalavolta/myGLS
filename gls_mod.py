@@ -434,7 +434,7 @@ class Gls:
         print("Offset:               %f +/- %f" % (self.hpstat["offset"], self.hpstat["offset_err"]))
         print("-----------------------------------")
 
-    def plot(self, block=False, period=False):
+    def plot(self, block=False, period=False, save_to_file=None):
         """
         Create a plot.
         """
@@ -448,7 +448,7 @@ class Gls:
             raise(ImportError("Could not import matplotlib.pylab."))
 
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=(12, 12))
         fig.subplots_adjust(hspace=0.15, wspace=0.08, right=0.97, top=0.95)
         ax = fig.add_subplot(4, 1, 1)
         ax.set_title("Normalized periodogram")
@@ -461,6 +461,7 @@ class Gls:
         fig.subplots_adjust(hspace=0.50, wspace=0.08, right=0.97, top=0.95)
         ax5 = fig.add_subplot(7, 1, 3, sharex=ax)
         ax5.set_xlabel("Time")
+        ax5.set_ylabel("Window F.")
         if period:
            ax5.set_xscale("log")
            ax5.set_xlabel("Period")
@@ -518,10 +519,16 @@ class Gls:
             plt.get_current_fig_manager().toolbar.pan()
         #t = fig.canvas.toolbar
         #plt.ToggleTool(plt.wx_ids['Pan'], False)
-        if block: print("Close the plot to continue.")
+
 
         #plt.tight_layout()
-        plt.show(block=block)
+        if save_to_file is not None:
+            plt.savefig(save_to_file, bbox_inches='tight')
+            plt.close(fig)
+        else:
+            if block: print("Close the plot to continue.")
+            plt.show(block=block)
+
         return plt
 
     def prob(self, Pn):
@@ -739,8 +746,8 @@ if __name__ == "__main__":
   argadd('-?', '-h', '-help', '--help', help='show this help message and exit', action='help')
   argadd('df', nargs='?',
                    help='Data file (three columns: time, data, error). If not specified example will be shown.')
-  argadd('-fbeg', type=float, help="Starting frequency for periodogram.")
-  argadd('-fend', type=float, help="Stopping frequency for periodogram.")
+  argadd('-fbeg', type=float, default= 0.00001, help="Starting frequency for periodogram.")
+  argadd('-fend', type=float, default= 1.10000, help="Stopping frequency for periodogram.")
   argadd('-Pbeg', type=float, help="Starting period for periodogram.")
   argadd('-Pend', type=float, help="Stopping period for periodogram.")
   argadd('-ofac', type=float, help="Oversampling factor (default=10).", default=10)
@@ -751,6 +758,7 @@ if __name__ == "__main__":
   argadd('-ofile', type=str, help="Output file for results.")
   argadd('-nostat', help="Switch off statistical output on screen.", dest='verbose',
                  default=True, action='store_false')
+  argadd('-plot', type=str, default=None, dest='plot_name', help='Save the plot to file')
   argadd('-noplot',  help="Suppress plots.", dest='plot', default=True, action='store_false')
   argadd('-lines' , type=np.double, nargs=3, required=False, default=[0, 1, 2], help='Specify a different column number for the data (Python notation)')
   argadd('-ldiff' , type=np.double, nargs=2, help='Use the difference of two columns for the data (Python notation)')
@@ -764,6 +772,7 @@ if __name__ == "__main__":
   df = args.pop('df')
   ofile = args.pop('ofile')
   plot = args.pop('plot')
+  plot_name = args.pop('plot_name')
   iterate = args.pop('iter')
   lines = args.pop('lines')
   ldiff = args.pop('ldiff')
@@ -784,7 +793,7 @@ if __name__ == "__main__":
   # A data file has been given.
   try:
     # dat = np.loadtxt(df, usecols=(0,1,2))
-    dat = np.loadtxt(df, unpack=True, skiprows=skipr)
+    dat = np.genfromtxt(df, unpack=True, skip_header=skipr)
     if ldiff is None:
        tye = dat[lines[0]], dat[lines[1]], dat[lines[2]] if len(dat) > 2 else None
     else:
@@ -794,11 +803,15 @@ if __name__ == "__main__":
     print("  " + str(e))
     exit(9)
 
-
+  plot_pdf = plot_name
   if iterate is None:
       gls = Gls(tye, **args)
+
+      if plot_name is not None:
+          plot_pdf = plot_name + '.pdf'
+
       if plot:
-          gls.plot(block=True)
+          gls.plot(block=True,save_to_file=plot_pdf)
 
       if ofile:
           gls.df = df
@@ -812,7 +825,10 @@ if __name__ == "__main__":
       for it in xrange(0,iterate+1):
           gls = Gls(tye, **args)
 
-          if plot: gls.plot(block=True)
+          if plot_name is not None:
+              plot_pdf = plot_name + '_it'+repr(it)+ '.pdf'
+
+          if plot: gls.plot(block=True, save_to_file=plot_name+'_it'+repr(it)+'.pdf')
 
           gls.df = df
           ofile_it = ofile + '_it' + repr(it)
@@ -820,7 +836,7 @@ if __name__ == "__main__":
 
           df = ofile_it + '_res.dat'
           if gls.veusz:
-            dat = np.loadtxt(df, unpack=True, comments='descriptor')
+            dat = np.genfromtxt(df, unpack=True, comments='descriptor')
           else:
-            dat = np.loadtxt(df, unpack=True)
+            dat = np.genfromtxt(df, unpack=True)
           tye = dat[0], dat[1], dat[2] if len(dat) > 2 else None
