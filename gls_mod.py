@@ -144,6 +144,10 @@ class Gls:
         self.veusz = veusz
         self.label = {'title': 'Generalized Lomb Periodogram',
                       'xlabel': 'Frequency'}
+
+        self.yres = None
+        self.ymod = None
+
         if "stats" in kwargs:
           print("Warning: 'stats' option is outdated. Please use 'verbose' instead.")
           verbose = kwargs["stats"]
@@ -155,7 +159,9 @@ class Gls:
         self._calcPeriodogram()
         self.pnorm(norm)
         self._peakPeriodogram()
+        # Added by Luca Malavolta
 
+        self._compute_residuals()
         # Output statistics
         if verbose:
             self.info()
@@ -690,10 +696,6 @@ class Gls:
                 f.write("%f  %f  %f\n" % line)
 
         fbest, T0 = self.hpstat["fbest"], self.hpstat["T0"]
-
-        ymod = self.sinmod(self.t)
-        yres = self.y - ymod
-        ypha = self.t*fbest % 1
         ofile_res = ofile + '_res.dat'
 
         with open(ofile_res, 'w') as f:
@@ -701,7 +703,7 @@ class Gls:
                 f.write("descriptor BJD_obs Y_res,+- Y_mod Y_pha Y_obs,+-\n")
             else:
                 f.write("# BJD Y_res Y_err Y_mod Y_pha Y_obs Y_res\n")
-            for line in zip(self.t, yres, self.yerr, ymod, ypha, self.y, self.yerr):
+            for line in zip(self.t, self.yres, self.yerr, self.ymod, self.ypha, self.y, self.yerr):
                 f.write("%f  %f  %f  %f  %f  %f  %f\n" % line)
 
         #tt = arange(self.t.min(), self.t.max(), 0.01/fbest)
@@ -728,6 +730,17 @@ class Gls:
         print("Results have been written to file: ", ofile_gls)
         print("Residuals have been written to file: ", ofile_res)
         print("Model has been written to file: ", ofile_mod)
+
+    def _compute_residuals(self):
+        """ Function added by Luca Malavolta
+            code taken from toFile function, the goal is to give the possibility
+            of compute iterative periodograms without writing files
+        """
+        fbest, T0 = self.hpstat["fbest"], self.hpstat["T0"]
+        self.ymod = self.sinmod(self.t)
+        self.yres = self.y - self.ymod
+        self.ypha = self.t*fbest % 1
+
 
 def example():
     # Run the example in the Gls class.
@@ -783,6 +796,8 @@ if __name__ == "__main__":
       lines = [0,1,2]
       ldiff = [1,4]
 
+
+
   if df is None:
     # No data file given. Show example:
     example()
@@ -790,20 +805,26 @@ if __name__ == "__main__":
     parser.print_help()
     exit(0)
 
+
+  line0 = int(lines[0])
+  line1 = int(lines[1])
+  line2 = int(lines[2])
   # A data file has been given.
   try:
     # dat = np.loadtxt(df, usecols=(0,1,2))
     dat = np.genfromtxt(df, unpack=True, skip_header=skipr)
     if ldiff is None:
-       tye = dat[lines[0]], dat[lines[1]], dat[lines[2]] if len(dat) > 2 else None
+       tye = dat[line0], dat[line1], dat[line2] if len(dat) > 2 else None
     else:
-       tye = dat[lines[0]], dat[ldiff[1]]-dat[ldiff[0]], dat[lines[2]] if len(dat) > 2 else None
+       ldiff0 = int(ldiff[0])
+       ldiff1 = int(ldiff[1])
+       tye = dat[line0], dat[ldiff1]-dat[ldiff0], dat[line2] if len(dat) > 2 else None
   except Exception as e:
     print("An error occurred while trying to read data file: ")
     print("  " + str(e))
     exit(9)
 
-  plot_pdf = plot_name
+  plot_pdf = None
   if iterate is None:
       gls = Gls(tye, **args)
 
@@ -818,25 +839,18 @@ if __name__ == "__main__":
           gls.toFile(ofile)
   else:
 
-      if ofile is None:
-          print("Please specify output file: ")
-          exit(9)
-
       for it in xrange(0,iterate+1):
           gls = Gls(tye, **args)
 
           if plot_name is not None:
               plot_pdf = plot_name + '_it'+repr(it)+ '.pdf'
 
-          if plot: gls.plot(block=True, save_to_file=plot_name+'_it'+repr(it)+'.pdf')
+          if plot:
+              gls.plot(block=True, save_to_file=plot_pdf)
 
-          gls.df = df
-          ofile_it = ofile + '_it' + repr(it)
-          gls.toFile(ofile_it)
+          if ofile:
+              ofile_it = ofile + '_it' + repr(it)
+              gls.df = ofile_it
+              gls.toFile(ofile_it)
 
-          df = ofile_it + '_res.dat'
-          if gls.veusz:
-            dat = np.genfromtxt(df, unpack=True, comments='descriptor')
-          else:
-            dat = np.genfromtxt(df, unpack=True)
-          tye = dat[0], dat[1], dat[2] if len(dat) > 2 else None
+          tye = gls.t, gls.yres, gls.yerr
