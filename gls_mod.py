@@ -698,12 +698,17 @@ class Gls:
         fbest, T0 = self.hpstat["fbest"], self.hpstat["T0"]
         ofile_res = ofile + '_res.dat'
 
+        if self.yerr is None:
+            yerr = np.zeros(len(self.t))
+        else:
+            yerr = self.yerr
+
         with open(ofile_res, 'w') as f:
             if self.veusz:
                 f.write("descriptor BJD_obs Y_res,+- Y_mod Y_pha Y_obs,+-\n")
             else:
                 f.write("# BJD Y_res Y_err Y_mod Y_pha Y_obs Y_res\n")
-            for line in zip(self.t, self.yres, self.yerr, self.ymod, self.ypha, self.y, self.yerr):
+            for line in zip(self.t, self.yres, yerr, self.ymod, self.ypha, self.y, yerr):
                 f.write("%f  %f  %f  %f  %f  %f  %f\n" % line)
 
         #tt = arange(self.t.min(), self.t.max(), 0.01/fbest)
