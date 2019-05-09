@@ -446,8 +446,8 @@ class Gls:
         """
         try:
             import matplotlib
-            if (matplotlib.get_backend() != "TkAgg"):
-                matplotlib.use("TkAgg")
+            #if (matplotlib.get_backend() != "TkAgg"):
+            #    matplotlib.use("TkAgg")
             import matplotlib.pylab as plt
             from matplotlib.ticker import FormatStrFormatter
         except ImportError:
@@ -844,7 +844,7 @@ if __name__ == "__main__":
           gls.toFile(ofile)
   else:
 
-      for it in xrange(0,iterate+1):
+      for it in range(0,iterate+1):
           gls = Gls(tye, **args)
 
           if plot_name is not None:
