@@ -33,6 +33,8 @@ from numpy import sum, pi, cos, sin, arctan2, exp, log, sqrt,\
 __version__ = '2017-02-21'
 __author__ = 'Mathias Zechmeister, Stefan Czesla'
 
+np.seterr(divide='ignore')
+
 class Gls:
     """
     Compute the Generalized Lomb-Scargle (GLS) periodogram.
@@ -157,6 +159,7 @@ class Gls:
         self._assignTimeSeries(lc)
         self._buildFreq()
         self._calcPeriodogram()
+        self._calcExtendedWindowFunction()
         self.pnorm(norm)
         self._peakPeriodogram()
         # Added by Luca Malavolta
@@ -306,6 +309,19 @@ class Gls:
         # power
         self.p = (SS*YC*YC + CC*YS*YS - 2.*CS*YC*YS) / (self._YY*D)   # Eq. (5) in ZK09
 
+    def _calcExtendedWindowFunction(self):
+
+        self.ewf_freq = np.arange(-1.,1.,0.0001)
+        self.ewf_period = 1./self.ewf_freq
+        EWF = self.ewf_freq * 0.0
+        for k, omega in enumerate(2.*pi*self.ewf_freq):
+            x = omega * self.th
+            cosx = cos(x)
+            sinx = sin(x)
+
+            EWF[k] = np.sum(cosx,dtype=np.double)**2 + np.sum(sinx,dtype=np.double)**2
+        self.ewf_values = EWF / self.N**2
+
     def _normcheck(self, norm):
         """
         Check normalization
@@ -450,32 +466,53 @@ class Gls:
             #    matplotlib.use("TkAgg")
             import matplotlib.pylab as plt
             from matplotlib.ticker import FormatStrFormatter
+            from matplotlib.ticker import FuncFormatter
         except ImportError:
             raise(ImportError("Could not import matplotlib.pylab."))
 
 
-        fig = plt.figure(figsize=(12, 12))
-        fig.subplots_adjust(hspace=0.15, wspace=0.08, right=0.97, top=0.95)
-        ax = fig.add_subplot(4, 1, 1)
-        ax.set_title("Normalized periodogram")
+        fig = plt.figure(figsize=(12, 12), constrained_layout=True)
+        #fig.subplots_adjust(hspace=0.15, wspace=0.08, right=0.97, top=0.95)
 
-        ax.set_ylabel(self.label["ylabel"])
-        if period: ax.set_xscale("log")
-        plt.setp(ax.get_xticklabels(), visible=False)
-        ax.plot(1/self.freq if period else self.freq, self.power, 'b-')
 
-        fig.subplots_adjust(hspace=0.50, wspace=0.08, right=0.97, top=0.95)
-        ax5 = fig.add_subplot(7, 1, 3, sharex=ax)
-        ax5.set_xlabel("Time")
-        ax5.set_ylabel("Window F.")
+        gs = fig.add_gridspec(8, 8, top=0.92, right=0.96 )
+        ax1 = fig.add_subplot(gs[:4, :])
+
+        #ax = fig.add_subplot(4, 1, 1)
+        ax1.set_title("Normalized periodogram")
+
+        ax1.set_ylabel(self.label["ylabel"])
+        if period: ax1.set_xscale("log")
+        plt.setp(ax1.get_xticklabels(), visible=False)
+        ax1.plot(1/self.freq if period else self.freq, self.power, 'b-', label="Periodogram")
+
+        if not period:
+            ax1.set_xlim(np.amin(self.freq), np.amax(self.freq))
+            ax1.plot(self.ewf_freq+self.hpstat["fbest"],
+            self.ewf_values * self.pmax, 'r-', alpha=0.5, label='Window function + fbest')
+            ax1.set_xlabel("Frequency")
+
+        f = lambda q: 1./q
+        finv = lambda x: 1./x
+
+        altax = ax1.twiny()
+        ax1.get_shared_x_axes().join(ax1,altax)
+        altax.xaxis.set_major_formatter(FuncFormatter(lambda k,pos: f"{finv(k):.2f}"))
+
         if period:
-           ax5.set_xscale("log")
-           ax5.set_xlabel("Period")
+           altax.set_xlabel('Frequency')
         else:
-           ax5.set_xlabel("Frequency")
-        ax5.plot(1/self.freq if period else self.freq, self.wf, 'b-')
+           altax.set_xlabel('Period')
 
-        fig.subplots_adjust(hspace=0.15, wspace=0.08, right=0.97, top=0.95)
+        #ax2 = fig.add_subplot(gs[3, :], sharex=ax1)
+        #ax2.set_xlabel("Time")
+        #ax2.set_ylabel("Window F.")
+        #if period:
+        #   ax2.set_xscale("log")
+        #   ax2.set_xlabel("Period")
+        #else:
+        #   ax2.set_xlabel("Frequency")
+        #ax2.plot(1/self.freq if period else self.freq, self.wf, 'b-')
 
         fbest, T0 = self.hpstat["fbest"], self.hpstat["T0"]
         # Data and model
@@ -483,40 +520,42 @@ class Gls:
         tt = arange(self.t.min(), self.t.max(), 0.01/fbest)
         ymod = self.sinmod(tt)
         yfit = self.sinmod(self.t)
-        ax1 = fig.add_subplot(4, 2, 5)
+        ax3 = fig.add_subplot(gs[4:6, :4])
+        #ax3 = fig.add_subplot(4, 2, 5)
         # ax1.set_xlabel("Time")
-        ax1.set_ylabel("Data")
-        plt.setp(ax1.get_xticklabels(), visible=False)
-        ax1.errorbar(self.t, self.y, **datstyle)
-        ax1.plot(tt, ymod, 'b-')
+        ax3.set_ylabel("Data")
+        plt.setp(ax3.get_xticklabels(), visible=False)
+        ax3.errorbar(self.t, self.y, **datstyle)
+        ax3.plot(tt, ymod, 'b-')
 
         tt = arange(T0, T0+1/fbest, 0.01/fbest)
         yy = self.sinmod(tt)
-        ax2 = fig.add_subplot(4, 2, 6, sharey=ax1)
-        plt.setp(ax2.get_xticklabels(), visible=False)
-        plt.setp(ax2.get_yticklabels(), visible=False)
+        ax4 = fig.add_subplot(gs[4:6, 4:])
+        #ax4 = fig.add_subplot(4, 2, 6, sharey=ax3)
+        plt.setp(ax4.get_xticklabels(), visible=False)
+        plt.setp(ax4.get_yticklabels(), visible=False)
         # ax2.set_xlabel("Time")
         # ax2.set_ylabel("Data")
-        ax2.errorbar(self.t*fbest % 1, self.y, **datstyle)
+        ax4.errorbar(self.t*fbest % 1, self.y, **datstyle)
         xx = tt*fbest % 1
         ii = np.argsort(xx)
-        ax2.plot(xx[ii], yy[ii], 'b-')
+        ax4.plot(xx[ii], yy[ii], 'b-')
 
         # Residuals
         yres = self.y - yfit
-        ax3 = fig.add_subplot(4, 2, 7, sharex=ax1)
-        ax3.set_xlabel("Time")
-        ax3.set_ylabel("Residuals")
-        ax3.errorbar(self.t, yres, **datstyle)
-        ax3.plot([self.t.min(), self.t.max()], [0,0], 'b-')
+        ax5 = fig.add_subplot(gs[6:, :4], sharex=ax3)
+        #ax5 = fig.add_subplot(4, 2, 7, sharex=ax3)
+        ax5.set_xlabel("Time")
+        ax5.set_ylabel("Residuals")
+        ax5.errorbar(self.t, yres, **datstyle)
+        ax5.plot([self.t.min(), self.t.max()], [0,0], 'b-')
 
-        ax4 = fig.add_subplot(4, 2, 8, sharex=ax2, sharey=ax3)
-        # ax4.set_title("Data")
-        ax4.set_xlabel("Phase")
-        # ax4.set_ylabel("Data")
-        plt.setp(ax4.get_yticklabels(), visible=False)
-        ax4.errorbar(self.t*fbest % 1, yres, **datstyle)
-        ax4.plot([0,1], [0,0], 'b-')
+        ax6 = fig.add_subplot(gs[6:, 4:], sharex=ax4, sharey=ax3)
+        # ax6 = fig.add_subplot(4, 2, 8, sharex=ax4, sharey=ax3)
+        ax6.set_xlabel("Phase")
+        plt.setp(ax6.get_yticklabels(), visible=False)
+        ax6.errorbar(self.t*fbest % 1, yres, **datstyle)
+        ax6.plot([0,1], [0,0], 'b-')
 
 
 
@@ -529,7 +568,7 @@ class Gls:
 
         #plt.tight_layout()
         if save_to_file is not None:
-            plt.savefig(save_to_file, bbox_inches='tight')
+            plt.savefig(save_to_file)
             plt.close(fig)
         else:
             if block: print("Close the plot to continue.")
