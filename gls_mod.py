@@ -486,6 +486,11 @@ class Gls:
         plt.setp(ax1.get_xticklabels(), visible=False)
         ax1.plot(1/self.freq if period else self.freq, self.power, 'b-', label="Periodogram")
 
+        altax = ax1.twiny()
+        ax1.get_shared_x_axes().join(ax1,altax)
+        altax.xaxis.set_major_formatter(FuncFormatter(lambda k,pos: f"{finv(k):.2f}"))
+
+
         if not period:
             ax1.set_xlim(np.amin(self.freq), np.amax(self.freq))
             ax1.plot(self.ewf_freq+self.hpstat["fbest"],
@@ -495,9 +500,6 @@ class Gls:
         f = lambda q: 1./q
         finv = lambda x: 1./x
 
-        altax = ax1.twiny()
-        ax1.get_shared_x_axes().join(ax1,altax)
-        altax.xaxis.set_major_formatter(FuncFormatter(lambda k,pos: f"{finv(k):.2f}"))
 
         if period:
            altax.set_xlabel('Frequency')
@@ -550,7 +552,7 @@ class Gls:
         ax5.errorbar(self.t, yres, **datstyle)
         ax5.plot([self.t.min(), self.t.max()], [0,0], 'b-')
 
-        ax6 = fig.add_subplot(gs[6:, 4:], sharex=ax4, sharey=ax3)
+        ax6 = fig.add_subplot(gs[6:, 4:], sharex=ax4, sharey=ax5)
         # ax6 = fig.add_subplot(4, 2, 8, sharex=ax4, sharey=ax3)
         ax6.set_xlabel("Phase")
         plt.setp(ax6.get_yticklabels(), visible=False)
