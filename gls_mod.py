@@ -518,7 +518,7 @@ class Gls:
 
         fbest, T0 = self.hpstat["fbest"], self.hpstat["T0"]
         # Data and model
-        datstyle = {'yerr':self.yerr, 'fmt':'r.', 'capsize':0}
+        datstyle = {'yerr':self.yerr, 'fmt':'none', 'capsize':0, 'zorder':1, 'ecolor':'r', 'alpha':0.25 }
         tt = arange(self.t.min(), self.t.max(), 0.01/fbest)
         ymod = self.sinmod(tt)
         yfit = self.sinmod(self.t)
@@ -528,7 +528,8 @@ class Gls:
         ax3.set_ylabel("Data")
         plt.setp(ax3.get_xticklabels(), visible=False)
         ax3.errorbar(self.t, self.y, **datstyle)
-        ax3.plot(tt, ymod, 'b-')
+        ax3.scatter(self.t, self.y, c='k', s=2, zorder=2)
+        ax3.plot(tt, ymod, 'b-', zorder=3)
 
         tt = arange(T0, T0+1/fbest, 0.01/fbest)
         yy = self.sinmod(tt)
@@ -539,9 +540,10 @@ class Gls:
         # ax2.set_xlabel("Time")
         # ax2.set_ylabel("Data")
         ax4.errorbar(self.t*fbest % 1, self.y, **datstyle)
+        ax4.scatter(self.t*fbest % 1, self.y, c='k', s=2, zorder=2)
         xx = tt*fbest % 1
         ii = np.argsort(xx)
-        ax4.plot(xx[ii], yy[ii], 'b-')
+        ax4.plot(xx[ii], yy[ii], 'b-', zorder=3)
 
         # Residuals
         yres = self.y - yfit
@@ -550,14 +552,16 @@ class Gls:
         ax5.set_xlabel("Time")
         ax5.set_ylabel("Residuals")
         ax5.errorbar(self.t, yres, **datstyle)
-        ax5.plot([self.t.min(), self.t.max()], [0,0], 'b-')
+        ax5.scatter(self.t, yres, c='k', s=2, zorder=2)
+        ax5.plot([self.t.min(), self.t.max()], [0,0], 'b-', zorder=3)
 
         ax6 = fig.add_subplot(gs[6:, 4:], sharex=ax4, sharey=ax5)
         # ax6 = fig.add_subplot(4, 2, 8, sharex=ax4, sharey=ax3)
         ax6.set_xlabel("Phase")
         plt.setp(ax6.get_yticklabels(), visible=False)
         ax6.errorbar(self.t*fbest % 1, yres, **datstyle)
-        ax6.plot([0,1], [0,0], 'b-')
+        ax6.scatter(self.t*fbest % 1, yres, c='k', s=2, zorder=2)
+        ax6.plot([0,1], [0,0], 'b-', zorder=3)
 
 
 
