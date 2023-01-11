@@ -482,11 +482,13 @@ class Gls:
         ax1.set_title("Normalized periodogram")
 
         ax1.set_ylabel(self.label["ylabel"])
-        if period: ax1.set_xscale("log")
+        # ax1.set_xscale("log") # added
         plt.setp(ax1.get_xticklabels(), visible=False)
         ax1.plot(1/self.freq if period else self.freq, self.power, 'b-', label="Periodogram")
-
+        # ax1.set_xlim(np.amin(self.freq), np.amax(self.freq)) # added
+        
         altax = ax1.twiny()
+        # altax.set_xscale("log") # added
         ax1.get_shared_x_axes().join(ax1,altax)
         altax.xaxis.set_major_formatter(FuncFormatter(lambda k,pos: f"{finv(k):.2f}"))
 
