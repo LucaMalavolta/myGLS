@@ -471,7 +471,7 @@ class Gls:
             raise(ImportError("Could not import matplotlib.pylab."))
 
 
-        fig = plt.figure(figsize=(12, 12), constrained_layout=True)
+        fig = plt.figure(figsize=(10, 10), constrained_layout=True)
         #fig.subplots_adjust(hspace=0.15, wspace=0.08, right=0.97, top=0.95)
 
 
@@ -486,7 +486,7 @@ class Gls:
         plt.setp(ax1.get_xticklabels(), visible=False)
         ax1.plot(1/self.freq if period else self.freq, self.power, 'b-', label="Periodogram")
         # ax1.set_xlim(np.amin(self.freq), np.amax(self.freq)) # added
-        
+
         altax = ax1.twiny()
         # altax.set_xscale("log") # added
         ax1.get_shared_x_axes().join(ax1,altax)
@@ -758,6 +758,16 @@ class Gls:
             for line in zip(self.t, self.yres, yerr, self.ymod, self.ypha, self.y, yerr):
                 f.write("%f  %f  %f  %f  %f  %f  %f\n" % line)
 
+        ofile_wind = ofile + '_win.dat'
+        with open(ofile_wind, 'w') as f:
+            if self.veusz:
+                f.write("descriptor freq window freq_fbest window_power")
+            else:
+                f.write("# freq window freq_fbest window_power\n")
+            for line in zip(self.ewf_freq, self.ewf_values, self.ewf_freq+self.hpstat["fbest"], self.ewf_values * self.pmax,):
+                f.write("%f  %f  %f %f \n" % line)
+
+
         #tt = arange(self.t.min(), self.t.max(), 0.01/fbest)
         #ymod = self.sinmod(tt)
         #ofile_mod = ofile + '_mod.dat'
@@ -827,9 +837,9 @@ if __name__ == "__main__":
   argadd('-noplot',  help="Suppress plots.", dest='plot', default=True, action='store_false')
   argadd('-lines' , type=np.double, nargs=3, required=False, default=[0, 1, 2], help='Specify a different column number for the data (Python notation)')
   argadd('-ldiff' , type=np.double, nargs=2, help='Use the difference of two columns for the data (Python notation)')
-  argadd('-trades', type=np.int, nargs='?', required=False, default=False, help='Standard input from TRADES ')
-  argadd('-nfreq', type=np.int, nargs='?', required=False, default=False, help='Number of frequencies ')
-  argadd('-skipr', type=np.int, nargs='?', required=False, default=0, help='Number of frequencies ')
+  argadd('-trades', type=int, nargs='?', required=False, default=False, help='Standard input from TRADES ')
+  argadd('-nfreq', type=int, nargs='?', required=False, default=False, help='Number of frequencies ')
+  argadd('-skipr', type=int, nargs='?', required=False, default=0, help='Number of frequencies ')
 
   argadd('-veusz',  help="Create Veusz-compatible lables.", dest='veusz', action='store_true')
 
@@ -877,7 +887,7 @@ if __name__ == "__main__":
     exit(9)
 
   plot_pdf = None
-  if iterate is None:
+  if iterate is None or iterate==1:
       gls = Gls(tye, **args)
 
       if plot_name is not None:
@@ -891,7 +901,7 @@ if __name__ == "__main__":
           gls.toFile(ofile)
   else:
 
-      for it in range(0,iterate+1):
+      for it in range(0,iterate):
           gls = Gls(tye, **args)
 
           if plot_name is not None:
