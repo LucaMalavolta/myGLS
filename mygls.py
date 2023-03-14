@@ -1073,7 +1073,7 @@ if __name__ == "__main__":
           gls.save_plot = plot_pdf
 
       if plot:
-          gls.plot(block=True,save_to_file=plot_pdf)
+          gls.plot(block=True)
 
 
   else:
