@@ -999,10 +999,11 @@ if __name__ == "__main__":
   #LM: additional arguments
   argadd('-lines' , type=np.double, nargs=3, required=False, default=[0, 1, 2], help="Specify a different column number for the data (Python notation)")
   argadd('-ldiff' , type=np.double, nargs=2, help="Use the difference of two columns for the data (Python notation)")
-  argadd('-oname', type=str, default=None, help="Extended output for results.")
+  argadd('-oname', type=str, default=None, help="Extended output for results")
   argadd('-skipr', type=int, nargs='?', required=False, default=0, help="Skip the frst n rows")
   argadd('-trades', type=int, nargs='?', required=False, default=False, help='Standard input from TRADES ')
   argadd('-iter', type=int, help="Iterate on residuals")
+  argadd('-bootstrap', type=int, help="Perform bootstrap", default=0)
 
   args = vars(parser.parse_args())
   df = args.pop('df')
@@ -1015,6 +1016,7 @@ if __name__ == "__main__":
   ldiff = args.pop('ldiff')
   skipr = args.pop('skipr')
   oname = args.pop('oname')
+  bootstrap_n = args.pop('bootstrap')
 
 
   if args.pop('trades') != False:
@@ -1074,6 +1076,31 @@ if __name__ == "__main__":
 
       if plot:
           gls.plot(block=True)
+      else:
+          gls.plot(block=False)
+
+
+      if bootstrap_n > 0:
+          args ['verbose'] = False
+          from astropy.stats import bootstrap
+          data_input = np.empty([len(tye[0]),2])
+          data_input[:,0] = tye[1]
+          data_input[:,1] = tye[2]
+          boot = bootstrap(data_input, bootstrap_n)
+
+          save_power = np.empty(bootstrap_n)
+          save_frequency = np.empty(bootstrap_n)
+
+          from tqdm import tqdm
+
+          for N in tqdm(range(bootstrap_n)):
+            temp_tye = tye[0], boot[0][:,0],  boot[0][:,1]
+            gls = Gls(temp_tye, **args)
+            save_power[N] = gls.pmax
+            save_frequency[N] = gls.best["f"]
+
+          print('Bootstrap probabilites:    5\%    1\%    0.1\%    0.01\% ')
+          print(np.percentile(save_power, [5, 1, 0.1, 0.01]) )
 
 
   else:
