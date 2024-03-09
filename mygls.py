@@ -1094,13 +1094,14 @@ if __name__ == "__main__":
           from tqdm import tqdm
 
           for N in tqdm(range(bootstrap_n)):
-            temp_tye = tye[0], boot[0][:,0],  boot[0][:,1]
+            temp_tye = tye[0], boot[N][:,0],  boot[N][:,1]
             gls = Gls(temp_tye, **args)
             save_power[N] = gls.pmax
             save_frequency[N] = gls.best["f"]
 
-          print('Bootstrap probabilites:    5\%    1\%    0.1\%    0.01\% ')
-          print(np.percentile(save_power, [5, 1, 0.1, 0.01]) )
+          print('FAPs:       5%       1%     0.5%     0.1%    0.01% ')
+          FAPs = np.percentile(save_power, [95.000, 99.000, 99.500, 99.900, 99.990])
+          print('      {0:.6f} {1:.6f} {2:.6f} {3:.6f} {4:.6f} '.format(FAPs[0], FAPs[1], FAPs[2], FAPs[3], FAPs[4]))
 
 
   else:
