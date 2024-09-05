@@ -592,8 +592,8 @@ class Gls:
 
               #LM: plot of the window function
               plt.set_xlim(np.amin(self.f), np.amax(self.f))
-              plt.plot(self.ewf_freq+fbest, self.ewf_values * self.power.max(), 'r-', alpha=0.5, zorder=0, label='Window function + fbest')
-
+              plt.plot(self.ewf_freq, self.ewf_values * self.power.max(), 'b-', alpha=0.5, zorder=0, label='Window function')
+              plt.plot(self.ewf_freq+fbest, self.ewf_values * self.power.max(), 'g-', alpha=0.5, zorder=0, label='Window function + fbest')
 
 
 
@@ -982,10 +982,10 @@ if __name__ == "__main__":
   argadd = parser.add_argument   # function short cut
   argadd('df', nargs='?',
                  help='Data file (three columns: time, data, error). If not specified example will be shown.')
-  argadd('-fbeg', '--fbeg', type=float, help="Starting frequency for periodogram.")
-  argadd('-fend', '--fend', type=float, help="Stopping frequency for periodogram.")
-  argadd('-Pbeg', '--Pbeg', type=float, help="Starting period for periodogram.")
-  argadd('-Pend', '--Pend', type=float, help="Stopping period for periodogram.")
+  argadd('-fmin', '--fmin', type=float, help="Starting frequency for periodogram.")
+  argadd('-fmax', '--fmax', type=float, help="Stopping frequency for periodogram.")
+  argadd('-Pmin', '--Pmin', type=float, help="Starting period for periodogram.")
+  argadd('-Pmax', '--Pmax', type=float, help="Stopping period for periodogram.")
   argadd('-ofac', '--ofac', type=float, help="Oversampling factor (default=10).", default=10)
   argadd('-hifac', '--hifac', type=float, help="Maximum frequency (default=1).", default=1)
   argadd('-fast', '--fast', help="Use trigonometric recurrences.", action='store_true')
@@ -1005,6 +1005,12 @@ if __name__ == "__main__":
   argadd('-iter', type=int, help="Iterate on residuals")
   argadd('-bootstrap', type=int, help="Perform bootstrap", default=0)
 
+  argadd('-fbeg', '--fbeg', type=float, help="Starting frequency for periodogram - alias option for fmin.")
+  argadd('-fend', '--fend', type=float, help="Stopping frequency for periodogram - alias option for fmax.")
+  argadd('-Pbeg', '--Pbeg', type=float, help="Starting period for periodogram - alias option for Pmin.")
+  argadd('-Pend', '--Pend', type=float, help="Stopping period for periodogram - alias option for Pmax.")
+
+
   args = vars(parser.parse_args())
   df = args.pop('df')
   ofile = args.pop('ofile')
@@ -1023,8 +1029,21 @@ if __name__ == "__main__":
       lines = [0,1,2]
       ldiff = [1,4]
 
+  if args.get('fmin', False):
+      args['fbeg'] = args['fmin']
+
+  if args.get('fmax', False):
+      args['fend'] = args['fmax']
+
+  if args.get('Pmin', False):
+      args['Pbeg'] = args['Pmin']
+
+  if args.get('Pmax', False):
+      args['Pend'] = args['Pmax']
 
 
+
+  #quit()
 
   if df is None:
     # No data file given. Show example:
