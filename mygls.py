@@ -151,6 +151,7 @@ class Gls:
         self.yres = None
         self.ymod = None
         self.save_plot = None
+        self.show_plot = True
 
         self._normcheck(norm)
 
@@ -704,15 +705,18 @@ class Gls:
 
         #fig.canvas.mpl_connect("resize_event", lambda _: (fig.tight_layout()))
         fig.canvas.mpl_connect("resize_event", lambda _: (tighter()))
-        fig.show()
-        if block:
-           print("Close the plot to continue.")
-           # needed when called from shell
-           mpl.show()
-        else:
-           # avoids blocking when: import test_gls
-           mpl.ion()
-        # mpl.show(block=block) # unexpected keyword argument 'block' in older matplotlib
+
+        if self.show_plot:
+
+          fig.show()
+          if block:
+             print("Close the plot to continue.")
+             # needed when called from shell
+             mpl.show()
+          else:
+             # avoids blocking when: import test_gls
+             mpl.ion()
+          # mpl.show(block=block) # unexpected keyword argument 'block' in older matplotlib
 
 
         if self.save_plot is not None:
@@ -1009,6 +1013,7 @@ if __name__ == "__main__":
   argadd('-fend', '--fend', type=float, help="Stopping frequency for periodogram - alias option for fmax.")
   argadd('-Pbeg', '--Pbeg', type=float, help="Starting period for periodogram - alias option for Pmin.")
   argadd('-Pend', '--Pend', type=float, help="Stopping period for periodogram - alias option for Pmax.")
+  argadd('-forceshow', '--forceshow', help="Suppress plots.", dest='forceshow', action='store_true')
 
 
   args = vars(parser.parse_args())
@@ -1040,10 +1045,6 @@ if __name__ == "__main__":
 
   if args.get('Pmax', False):
       args['Pend'] = args['Pmax']
-
-
-
-  #quit()
 
   if df is None:
     # No data file given. Show example:
@@ -1093,6 +1094,9 @@ if __name__ == "__main__":
           plot_pdf = oname + '.pdf'
           gls.save_plot = plot_pdf
 
+          if not args['forceshow']:
+            gls.show_plot = False
+
       if plot:
           gls.plot(block=True)
       else:
@@ -1140,6 +1144,9 @@ if __name__ == "__main__":
               gls.toFileExtended(oname_it)
               plot_pdf = oname_it + '.pdf'
               gls.save_plot = plot_pdf
+
+              if not args['forceshow']:
+                gls.show_plot = False
 
           if plot:
               gls.plot(block=True)
